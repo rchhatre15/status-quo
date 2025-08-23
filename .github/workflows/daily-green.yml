@@ -54,36 +54,97 @@ jobs:
           ref: ${{ github.event.repository.default_branch }}
 
       - name: Generate unique content for today
+              - name: Set up Python
+        if: env.RUN_NOW == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'  # speeds up installs
+
+      - name: Install deps
         if: env.RUN_NOW == 'true'
         run: |
-          python3 - <<'PY'
-          from datetime import datetime
+          python -m pip install --upgrade pip
+          pip install yfinance pandas python-dateutil
+
+      - name: Generate market snapshot (BTC, VOO, Gold)
+        if: env.RUN_NOW == 'true'
+        run: |
+          python - <<'PY'
+          import os, json
+          from datetime import datetime, timedelta
           from zoneinfo import ZoneInfo
-          import hashlib, random, os, json
+          import pandas as pd
+          import yfinance as yf
+
+          # --- Config ---
+          ASSETS = {
+            "BTC":  {"ticker": "BTC-USD",   "name": "Bitcoin",                    "unit": "USD"},   # Yahoo symbol
+            "VOO":  {"ticker": "VOO",       "name": "Vanguard S&P 500 ETF",       "unit": "USD"},
+            "GOLD": {"ticker": "XAUUSD=X",  "name": "Gold spot (XAU/USD)",        "unit": "USD/oz"}
+          }
+          WINDOWS = [("1d",1), ("1w",7), ("1m",30), ("6m",182), ("1y",365), ("5y",1826)]
+          LOOKBACK_YEARS = 8  # ensures 5y window has data
+
+          # Pull daily history for all tickers at once (adjusted=total-return friendly for ETFs)
+          tickers = " ".join(v["ticker"] for v in ASSETS.values())
+          data = yf.download(tickers=tickers, period=f"{LOOKBACK_YEARS}y", interval="1d",
+                             group_by='ticker', auto_adjust=False, progress=False)
+
+          def latest_series(tkr):
+            df = data[tkr] if isinstance(data.columns, pd.MultiIndex) else data
+            # Prefer Adj Close if available (dividends/splits), else Close
+            col = "Adj Close" if "Adj Close" in df.columns else "Close"
+            return df[col].dropna()
+
+          def pct_change_from(series, days_back):
+            # Compare last available close to the close on or BEFORE target calendar date
+            if series.empty: return None
+            last_date = series.index[-1]
+            past_target = last_date - timedelta(days=days_back)
+            past_series = series.loc[:past_target]
+            if past_series.empty: return None
+            last = float(series.iloc[-1])
+            past = float(past_series.iloc[-1])
+            return None if past == 0 else (last/past - 1.0) * 100.0
 
           tz = ZoneInfo("America/New_York")
-          today = datetime.now(tz).strftime("%Y-%m-%d")
+          today_local = datetime.now(tz).strftime("%Y-%m-%d")
+          os.makedirs("pulse", exist_ok=True)
 
-          # Different day ⇒ different seed ⇒ different note
-          import os
-          random.seed(today + os.getenv("GITHUB_REPOSITORY",""))
-
-          topics = ["what I learned", "bug I fixed", "idea to try", "reading note", "tiny experiment"]
-          words  = ["vector","tensor","spark","docker","api","merge","regex","lambda",
-                    "schema","cache","index","queue","state","graph","batch","stream"]
-          note = " ".join(random.sample(words, k=8))
-          payload = {
-            "date": today,
-            "topic": random.choice(topics),
-            "note": note,
-            "hash": hashlib.sha256(note.encode()).hexdigest()[:10]
+          out = {
+            "date_local": today_local,
+            "as_of_close": {},   # per-asset last close date
+            "assets": {}         # per-asset snapshot & returns
           }
 
-          os.makedirs("pulse", exist_ok=True)
-          path = f"pulse/{today}.json"
+          for key, meta in ASSETS.items():
+            try:
+              s = latest_series(meta["ticker"])
+              if s.empty:
+                out["assets"][key] = {"error": "no_data", **meta}
+                continue
+              last_date = s.index[-1].date().isoformat()
+              last_price = float(s.iloc[-1])
+              changes = {}
+              for label, days in WINDOWS:
+                chg = pct_change_from(s, days)
+                changes[label] = None if chg is None else round(chg, 2)
+              out["as_of_close"][key] = last_date
+              out["assets"][key] = {
+                **meta,
+                "price": round(last_price, 2),
+                "currency": "USD",
+                "changes_pct": changes,
+                "note": "Changes use last available daily close; if markets were closed on the exact target day, we use the closest prior trading day."
+              }
+            except Exception as e:
+              out["assets"][key] = {"error": str(e), **meta}
+
+          path = f"pulse/{today_local}.json"
           with open(path, "w") as f:
-              json.dump(payload, f, indent=2)
-          print("Wrote", path, "->", payload)
+            json.dump(out, f, indent=2)
+          print("Wrote", path)
           PY
 
       - name: Commit and push
