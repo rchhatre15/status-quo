@@ -1,0 +1,97 @@
+name: daily-green
+
+on:
+  # run every 20 minutes + allow manual test runs
+  schedule:
+    - cron: "*/20 * * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Commit immediately (for manual testing)"
+        required: false
+        default: "false"
+
+permissions:
+  contents: write  # needed to push commits back to the repo
+
+jobs:
+  make-green:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: (Optional) Force run now if manually triggered
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.force == 'true' }}
+        run: echo "RUN_NOW=true" >> $GITHUB_ENV
+
+      - name: Decide today's random slot (America/New_York)
+        # Pick one random 20-minute slot between 9:00 and 18:00 local.
+        # Slots: 9:00..17:40 (every 20m) + 18:00 exactly (no 18:20/18:40).
+        env:
+          TZ: America/New_York
+        run: |
+          if [ "${RUN_NOW:-}" = "true" ]; then exit 0; fi
+          date_str=$(date +%Y-%m-%d)
+          seed="$date_str $GITHUB_REPOSITORY"
+          # 28 slots total: 9h*3 + 1 (18:00)
+          idx=$(( 0x$(echo -n "$seed" | sha256sum | cut -c1-8) % 28 ))
+          if [ "$idx" -lt 27 ]; then
+            h=$((9 + idx / 3))
+            m20=$((idx % 3))
+          else
+            h=18; m20=0
+          fi
+          now_h=$(date +%H)
+          now_m=$(date +%M); now_m20=$((10#$now_m / 20))
+          echo "Target slot (NY): $h:$((m20*20)) — Now: $now_h:$now_m"
+          if [ "$h" -eq "$now_h" ] && [ "$m20" -eq "$now_m20" ]; then
+            echo "RUN_NOW=true" >> $GITHUB_ENV
+          fi
+
+      - name: Check out default branch
+        if: env.RUN_NOW == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Generate unique content for today
+        if: env.RUN_NOW == 'true'
+        run: |
+          python3 - <<'PY'
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          import hashlib, random, os, json
+
+          tz = ZoneInfo("America/New_York")
+          today = datetime.now(tz).strftime("%Y-%m-%d")
+
+          # Different day ⇒ different seed ⇒ different note
+          import os
+          random.seed(today + os.getenv("GITHUB_REPOSITORY",""))
+
+          topics = ["what I learned", "bug I fixed", "idea to try", "reading note", "tiny experiment"]
+          words  = ["vector","tensor","spark","docker","api","merge","regex","lambda",
+                    "schema","cache","index","queue","state","graph","batch","stream"]
+          note = " ".join(random.sample(words, k=8))
+          payload = {
+            "date": today,
+            "topic": random.choice(topics),
+            "note": note,
+            "hash": hashlib.sha256(note.encode()).hexdigest()[:10]
+          }
+
+          os.makedirs("pulse", exist_ok=True)
+          path = f"pulse/{today}.json"
+          with open(path, "w") as f:
+              json.dump(payload, f, indent=2)
+          print("Wrote", path, "->", payload)
+          PY
+
+      - name: Commit and push
+        if: env.RUN_NOW == 'true'
+        run: |
+          git config user.name "${{ vars.COMMIT_NAME || 'daily-bot' }}"
+          git config user.email "${{ secrets.COMMIT_EMAIL }}"
+          git add -A
+          # Use local NY date in the message for easy reading
+          git commit -m "daily pulse: $(TZ=America/New_York date +%F) [skip ci]" || { echo "Nothing to commit"; exit 0; }
+          git push origin HEAD:${{ github.event.repository.default_branch }}
