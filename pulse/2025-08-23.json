@@ -9,15 +9,15 @@
       "ticker": "BTC-USD",
       "name": "Bitcoin",
       "unit": "USD",
-      "price": 115756.7,
+      "price": 115043.52,
       "currency": "USD",
       "changes_pct": {
-        "1d": 2.97,
-        "1w": -1.48,
-        "1m": -2.21,
-        "6m": 19.86,
-        "1y": 80.6,
-        "5y": 892.36
+        "1d": -1.57,
+        "1w": -2.08,
+        "1m": -2.81,
+        "6m": 19.12,
+        "1y": 79.49,
+        "5y": 886.24
       },
       "note": "Changes use last available daily close; if markets were closed on the exact target day, we use the closest prior trading day."
     },
