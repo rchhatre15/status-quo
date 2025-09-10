@@ -1,0 +1,36 @@
+{
+  "date_local": "2025-09-10",
+  "as_of_close": {
+    "VOO": "2025-09-10"
+  },
+  "assets": {
+    "BTC": {
+      "error": "no_data",
+      "ticker": "BTC-USD",
+      "name": "Bitcoin",
+      "unit": "USD"
+    },
+    "VOO": {
+      "ticker": "VOO",
+      "name": "Vanguard S&P 500 ETF",
+      "unit": "USD",
+      "price": 598.57,
+      "currency": "USD",
+      "changes_pct": {
+        "1d": 0.1,
+        "1w": 1.16,
+        "1m": 2.4,
+        "6m": 17.27,
+        "1y": 20.23,
+        "5y": 110.2
+      },
+      "note": "Changes use last available daily close; if markets were closed on the exact target day, we use the closest prior trading day."
+    },
+    "GOLD": {
+      "error": "no_data",
+      "ticker": "XAUUSD=X",
+      "name": "Gold spot (XAU/USD)",
+      "unit": "USD/oz"
+    }
+  }
+}
