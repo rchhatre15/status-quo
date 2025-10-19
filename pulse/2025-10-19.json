@@ -1,0 +1,47 @@
+{
+  "date_local": "2025-10-19",
+  "as_of_close": {
+    "BTC": "2025-10-19",
+    "VOO": "2025-10-17"
+  },
+  "assets": {
+    "BTC": {
+      "ticker": "BTC-USD",
+      "name": "Bitcoin",
+      "unit": "USD",
+      "price": 109197.04,
+      "currency": "USD",
+      "changes_pct": {
+        "1d": 1.86,
+        "1w": -5.19,
+        "1m": -5.61,
+        "6m": 28.2,
+        "1y": 59.73,
+        "5y": 829.97
+      },
+      "note": "Changes use last available daily close; if markets were closed on the exact target day, we use the closest prior trading day."
+    },
+    "VOO": {
+      "ticker": "VOO",
+      "name": "Vanguard S&P 500 ETF",
+      "unit": "USD",
+      "price": 610.76,
+      "currency": "USD",
+      "changes_pct": {
+        "1d": 0.55,
+        "1w": 1.71,
+        "1m": 1.06,
+        "6m": 26.97,
+        "1y": 15.54,
+        "5y": 105.96
+      },
+      "note": "Changes use last available daily close; if markets were closed on the exact target day, we use the closest prior trading day."
+    },
+    "GOLD": {
+      "error": "no_data",
+      "ticker": "XAUUSD=X",
+      "name": "Gold spot (XAU/USD)",
+      "unit": "USD/oz"
+    }
+  }
+}
