@@ -1,0 +1,47 @@
+{
+  "date_local": "2026-09-16",
+  "as_of_close": {
+    "BTC": "2026-09-16",
+    "VOO": "2026-09-16"
+  },
+  "assets": {
+    "BTC": {
+      "ticker": "BTC-USD",
+      "name": "Bitcoin",
+      "unit": "USD",
+      "price": 76200.8,
+      "currency": "USD",
+      "changes_pct": {
+        "1d": 0.78,
+        "1w": -2.63,
+        "1m": 18.13,
+        "6m": 6.96,
+        "1y": -34.78,
+        "5y": 59.47
+      },
+      "note": "Changes use last available daily close; if markets were closed on the exact target day, we use the closest prior trading day."
+    },
+    "VOO": {
+      "ticker": "VOO",
+      "name": "Vanguard S&P 500 ETF",
+      "unit": "USD",
+      "price": 693.22,
+      "currency": "USD",
+      "changes_pct": {
+        "1d": -0.43,
+        "1w": -1.09,
+        "1m": -2.4,
+        "6m": 14.64,
+        "1y": 15.59,
+        "5y": 81.0
+      },
+      "note": "Changes use last available daily close; if markets were closed on the exact target day, we use the closest prior trading day."
+    },
+    "GOLD": {
+      "error": "no_data",
+      "ticker": "XAUUSD=X",
+      "name": "Gold spot (XAU/USD)",
+      "unit": "USD/oz"
+    }
+  }
+}
